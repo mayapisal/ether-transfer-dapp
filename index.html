@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ether Transfer via MetaMask</title>
+</head>
+<body>
+  <h2>Ether Transfer DApp</h2>
+
+  <button onclick="connectWallet()">Connect MetaMask</button>
+  <p id="wallet"></p>
+
+  <hr>
+  <label>Recipient Address:</label><br>
+  <input type="text" id="recipient" placeholder="0x..."><br><br>
+
+  <label>Amount in ETH (for variable transfer only):</label><br>
+  <input type="number" id="amount" placeholder="e.g. 0.05" step="0.001"><br><br>
+
+  <button onclick="sendFixed()">Send 0.01 ETH</button>
+  <button onclick="sendVariable()">Send Custom Amount</button>
+
+  <p id="status"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script>
+    const contractAddress = "PASTE_YOUR_DEPLOYED_CONTRACT_ADDRESS_HERE";
+    const abi = [
+      {
+        "inputs":[{"internalType":"address payable","name":"recipient","type":"address"}],
+        "name":"sendFixedAmount",
+        "outputs":[],
+        "stateMutability":"payable",
+        "type":"function"
+      },
+      {
+        "inputs":[{"internalType":"address payable","name":"recipient","type":"address"}],
+        "name":"sendVariableAmount",
+        "outputs":[],
+        "stateMutability":"payable",
+        "type":"function"
+      }
+    ];
+
+    let web3;
+    let contract;
+    let userAccount;
+
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert("Please install MetaMask first!");
+        return;
+      }
+
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      web3 = new Web3(window.ethereum);
+      const accounts = await web3.eth.getAccounts();
+      userAccount = accounts[0];
+
+      document.getElementById("wallet").textContent = "Connected: " + userAccount;
+
+      contract = new web3.eth.Contract(abi, contractAddress);
+    }
+
+    async function sendFixed() {
+      const recipient = document.getElementById("recipient").value;
+      document.getElementById("status").textContent = "Sending 0.01 ETH...";
+
+      try {
+        await contract.methods.sendFixedAmount(recipient).send({
+          from: userAccount,
+          value: web3.utils.toWei("0.01", "ether")
+        });
+        document.getElementById("status").textContent = "✅ 0.01 ETH Sent!";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").textContent = "❌ Transaction failed.";
+      }
+    }
+
+    async function sendVariable() {
+      const recipient = document.getElementById("recipient").value;
+      const amount = document.getElementById("amount").value;
+
+      if (!amount || parseFloat(amount) <= 0) {
+        alert("Enter a valid ETH amount.");
+        return;
+      }
+
+      document.getElementById("status").textContent = "Sending " + amount + " ETH...";
+
+      try {
+        await contract.methods.sendVariableAmount(recipient).send({
+          from: userAccount,
+          value: web3.utils.toWei(amount, "ether")
+        });
+        document.getElementById("status").textContent = "✅ " + amount + " ETH Sent!";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").textContent = "❌ Transaction failed.";
+      }
+    }
+  </script>
+</body>
+</html>
